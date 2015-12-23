@@ -28,7 +28,7 @@ WORKDIR /
 
 ADD dropboxctl /
 
-VOLUMES ["/.dropbox", "/Dropbox"]
+VOLUME ["/.dropbox", "/Dropbox"]
 
 ENTRYPOINT ["/dropboxctl"]
 CMD ["start"]
