@@ -22,6 +22,10 @@ if [ "$1" = "start" ]; then
   else
     DROPBOX_USER=$DROPBOX_SYS_USER
   fi
+
+  if [ "$DROPBOX_UID" -gt 0 ]; then
+    usermod --home / "$DROPBOX_USER"
+  fi
  
   [ -d "${DROPBOX_MOUNT_POINT}" ] || mkdir -p "${DROPBOX_MOUNT_POINT}"
   [ -d "${DROPBOX_DIST_DIR}" ] || mkdir -p "${DROPBOX_DIST_DIR}"
