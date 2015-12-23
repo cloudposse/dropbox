@@ -45,6 +45,8 @@ if [ "$1" = "start" ]; then
         "${DROPBOX_DATA_DIR}/unlink.db" \
         "${DROPBOX_DATA_DIR}/dropbox.pid"
   
+  umask 0022
+
   echo "Starting Dropbox ($DROPBOX_VERSION) as user $DROPBOX_USER($DROPBOX_UID) with group $DROPBOX_GROUP($DROPBOX_GID)"
   su "$DROPBOX_USER" -s /bin/bash -c "${DROPBOX_DIST_DIR}/dropboxd"
   find /tmp -name '*.txt' -exec cat {} \; 
