@@ -1,0 +1,62 @@
+#!/bin/bash
+
+DROPBOX_DATA_DIR="/.dropbox"
+DROPBOX_DIST_DIR="/.dropbox-dist"
+DROPBOX_MOUNT_POINT="/Dropbox"
+DROPBOX_GROUP="dropbox"
+DROPBOX_USER="dropbox"
+DROPBOX_VERSION=$(cat "${DROPBOX_DIST_DIR}/VERSION")
+
+
+if [ "$1" = "start" ]; then
+  DROPBOX_SYS_GROUP=$(getent group $DROPBOX_GID | cut -d: -f1)
+  if [ -z "$DROPBOX_SYS_GROUP" ]; then
+    groupadd --force -g $DROPBOX_GID $DROPBOX_GROUP 
+  else
+    DROPBOX_GROUP=$DROPBOX_SYS_GROUP
+  fi
+  
+  DROPBOX_SYS_USER=$(getent passwd $DROPBOX_UID | cut -d: -f1)
+  if [ -z "$DROPBOX_SYS_USER" ]; then
+    useradd --non-unique -u $DROPBOX_UID -g $DROPBOX_GID -d / -s /bin/sh --no-create-home $DROPBOX_USER
+  else
+    DROPBOX_USER=$DROPBOX_SYS_USER
+  fi
+ 
+  [ -d "${DROPBOX_MOUNT_POINT}" ] || mkdir -p "${DROPBOX_MOUNT_POINT}"
+  [ -d "${DROPBOX_DIST_DIR}" ] || mkdir -p "${DROPBOX_DIST_DIR}"
+  [ -d "${DROPBOX_DATA_DIR}" ] || mkdir -p "${DROPBOX_DATA_DIR}"
+
+  # Change ownership to dropbox account on all working folders.
+  chown -R "$DROPBOX_UID:$DROPBOX_GID" "${DROPBOX_MOUNT_POINT}" "${DROPBOX_DIST_DIR}" "${DROPBOX_DATA_DIR}"
+
+  find "${DROPBOX_DATA_DIR}" -type d -exec chmod 755 {} \;
+
+  #ls -alR "${DROPBOX_DATA_DIR}"
+  
+  # Remove temp files.
+  
+  rm -f "${DROPBOX_DATA_DIR}/command_socket" \
+        "${DROPBOX_DATA_DIR}/iface_socket" \
+        "${DROPBOX_DATA_DIR}/unlink.db" \
+        "${DROPBOX_DATA_DIR}/dropbox.pid"
+  
+  echo "Starting Dropbox ($DROPBOX_VERSION) as user $DROPBOX_USER($DROPBOX_UID) with group $DROPBOX_GROUP($DROPBOX_GID)"
+  su "$DROPBOX_USER" -s /bin/bash -c "${DROPBOX_DIST_DIR}/dropboxd"
+  find /tmp -name '*.txt' -exec cat {} \; 
+else 
+  # 'running' exit code is inverted (based on unix standards)
+  echo -n 'Waiting for daemon to start...'
+  while dropbox running; do echo -n '.'; sleep 1; done
+  echo 'ok'
+
+  # Now wait for it to actually be functioning
+  echo -n 'Waiting for daemon to be ready...'
+  while [ "$(dropbox status)" = "Starting..." ] || [ "$(dropbox status)" = "Dropbox isn't running!" ]; do echo -n '.' ; sleep 1; done
+  echo 'ok'
+
+  cd "${DROPBOX_MOUNT_POINT}"
+  exec dropbox "$@"
+fi
+
+
